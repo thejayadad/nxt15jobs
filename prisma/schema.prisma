@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+// User model with relation based on email
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Adding related models (Trips, Itineraries, etc.) with relation based on email
+  trips         Trip[]
+  itineraries   Itinerary[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// New Trip model for travel planning
+model Trip {
+  id          String   @id @default(cuid())
+  name        String
+  destination String
+  startDate   DateTime
+  endDate     DateTime
+  userEmail   String
+  user        User     @relation(fields: [userEmail], references: [email])
+
+  itineraries Itinerary[] // Relation to itineraries
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Itinerary model for tracking the user's travel itinerary
+model Itinerary {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id])
+
+  userEmail   String   // Add userEmail to link Itinerary to User by email
+  user        User     @relation(fields: [userEmail], references: [email])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
